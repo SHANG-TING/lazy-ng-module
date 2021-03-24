@@ -1,32 +1,80 @@
-import { Component } from '@angular/core';
+import { Compiler, Component, ComponentFactory, Injector, Type, ViewChild, ViewContainerRef } from '@angular/core';
+
+import { M1comp1Component } from './module1/m1comp1.component';
+import { M1comp2Component } from './module1/m1comp2.component';
+import { Module1Module } from './module1/module1.module';
+import { M2comp1Component } from './module2/m2comp1.component';
+import { M2comp2Component } from './module2/m2comp2.component';
+import { M2comp3Component } from './module2/m2comp3.component';
+import { Module2Module } from './module2/module2.module';
 
 @Component({
   selector: 'app-root',
   template: `
-    <!--The content below is only a placeholder and can be replaced.-->
-    <div style="text-align:center" class="content">
-      <h1>
-        Welcome to {{title}}!
-      </h1>
-      <span style="display: block">{{ title }} app is running!</span>
-      <img width="300" alt="Angular Logo" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTAgMjUwIj4KICAgIDxwYXRoIGZpbGw9IiNERDAwMzEiIGQ9Ik0xMjUgMzBMMzEuOSA2My4ybDE0LjIgMTIzLjFMMTI1IDIzMGw3OC45LTQzLjcgMTQuMi0xMjMuMXoiIC8+CiAgICA8cGF0aCBmaWxsPSIjQzMwMDJGIiBkPSJNMTI1IDMwdjIyLjItLjFWMjMwbDc4LjktNDMuNyAxNC4yLTEyMy4xTDEyNSAzMHoiIC8+CiAgICA8cGF0aCAgZmlsbD0iI0ZGRkZGRiIgZD0iTTEyNSA1Mi4xTDY2LjggMTgyLjZoMjEuN2wxMS43LTI5LjJoNDkuNGwxMS43IDI5LjJIMTgzTDEyNSA1Mi4xem0xNyA4My4zaC0zNGwxNy00MC45IDE3IDQwLjl6IiAvPgogIDwvc3ZnPg==">
+    <div class="buttons">
+      <button (click)="loadModule1()">lazy module1</button>
+      <button (click)="loadModule2()">lazy module2</button>
     </div>
-    <h2>Here are some links to help you start: </h2>
-    <ul>
-      <li>
-        <h2><a target="_blank" rel="noopener" href="https://angular.io/tutorial">Tour of Heroes</a></h2>
-      </li>
-      <li>
-        <h2><a target="_blank" rel="noopener" href="https://angular.io/cli">CLI Documentation</a></h2>
-      </li>
-      <li>
-        <h2><a target="_blank" rel="noopener" href="https://blog.angular.io/">Angular blog</a></h2>
-      </li>
-    </ul>
-    
+
+    <div class="contents">
+      <ul>
+        <li
+          *ngFor="let factory of componentFactories"
+          (click)="createComponent(factory)"
+        >
+          {{ factory.componentType.name }}
+        </li>
+      </ul>
+      <div class="anchor">
+        <ng-container #anchor></ng-container>
+      </div>
+    </div>
   `,
-  styles: []
+  styleUrls: ['./app.component.scss']
 })
 export class AppComponent {
-  title = 'lazy-ng-module';
+  @ViewChild('anchor', { read: ViewContainerRef })
+  anchor!: ViewContainerRef;
+
+  componentFactories: ComponentFactory<any>[] = [];
+
+  constructor(private compiler: Compiler, private injector: Injector) {}
+
+  async loadModule1() {
+    this.loadModule((await import('./module1/module1.module')).Module1Module);
+  }
+
+  async loadModule2() {
+    this.loadModule((await import('./module2/module2.module')).Module2Module);
+  }
+
+  createComponent(factory: ComponentFactory<any>) {
+    this.anchor.clear();
+    this.anchor.createComponent(factory);
+  }
+
+  private loadModule(moduleType: Type<any>) {
+    this.anchor.clear();
+
+    // const moduleFactory = this.compiler.compileModuleSync(moduleType);
+    // const { componentFactoryResolver } = moduleFactory.create(this.injector);
+
+    // if (moduleType.name === 'Module1Module') {
+    //   this.componentFactories = [
+    //     componentFactoryResolver.resolveComponentFactory(M1comp1Component),
+    //     componentFactoryResolver.resolveComponentFactory(M1comp2Component)
+    //   ];
+    // } else if (moduleType.name === 'Module2Module') {
+    //   this.componentFactories = [
+    //     componentFactoryResolver.resolveComponentFactory(M2comp1Component),
+    //     componentFactoryResolver.resolveComponentFactory(M2comp2Component),
+    //     componentFactoryResolver.resolveComponentFactory(M2comp3Component)
+    //   ];
+    // }
+
+    const moduleFactories = this.compiler.compileModuleAndAllComponentsSync(
+      moduleType
+    );
+    this.componentFactories = moduleFactories.componentFactories;
+  }
 }
